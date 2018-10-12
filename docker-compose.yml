@@ -1,0 +1,59 @@
+version: "3"
+networks:
+  net:
+services:
+  web:
+    image: nginx:latest
+    ports:
+     - "8080:8080"
+    volumes:
+      - ./code:/var/www/html
+      - ./conf/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./log:/var/log/nginx
+    links:
+      - php
+    networks:
+      - net
+  php:
+    build: .
+    volumes:
+      - ./code:/var/www/html
+      - ./conf/php.conf:/etc/php/7.2/fpm/pool.d/zz-log.conf
+      - ./log/php-fpm.log:/var/log/php7.2-fpm.log
+    environment:
+      XDEBUG_CONFIG: remote_host=host.docker.internal
+    links:
+      - db
+    networks:
+      - net
+  db:
+    image: mariadb:10.3
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: wordpress
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+    restart: always
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - net
+  wordpress:
+    image: wordpress:php7.2-fpm
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+    links:
+      - db
+    volumes:
+      - ./code:/var/www/html
+    working_dir: /var/www/html
+    networks:
+      - net
+volumes:
+  db:
